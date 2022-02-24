@@ -1,7 +1,9 @@
 const asyncHandler = require('express-async-handler')
+const bcrypt = require('bcryptjs')
+const User = require('../models/userModel')
 
 const registerUser = asyncHandler(
-    (req,res) =>{
+    async (req,res) =>{
         const {name,email,password} = req.body
         //Validations
         // if(!name || !email || !password){
@@ -12,7 +14,40 @@ const registerUser = asyncHandler(
            res.status(400)
            throw new Error('Please Include All Fields!')
         } 
-        console.log(`Your name is ${name} `);
+       const  userExists = await User.findOne({
+           email : email
+       })
+
+       //Find if user exits
+
+       if(userExists){
+           res.status(400)
+           throw new Error ('User Already Exists')
+       }
+
+       //Hash Password
+
+       const salt = await bcrypt.genSalt(10)
+       const hashedPassword = await bcrypt.hash(password, salt)
+
+       //Create User
+
+       const user = await User.create({
+           name,
+           email,
+           password : hashedPassword
+       })
+
+       if(user){
+           res.status(201).json({
+               _id : user.id,
+               name : user.name,
+               email : user.email
+           })
+       } else {
+           res.status(400)
+           throw new error ('Invalid user data')
+       }
         
     }
 )
