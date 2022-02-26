@@ -1,6 +1,16 @@
 const asyncHandler = require('express-async-handler')
 const bcrypt = require('bcryptjs')
+const jwt = require('jsonwebtoken')
 const User = require('../models/userModel')
+
+//Generate Token
+
+const generateToken = (id) => {
+return jwt.sign({id}, process.env.JWT_SECRET,{
+    expiresIn : '10d'
+})
+}
+
 
 const registerUser = asyncHandler(
     async (req,res) =>{
@@ -42,7 +52,8 @@ const registerUser = asyncHandler(
            res.status(201).json({
                _id : user.id,
                name : user.name,
-               email : user.email
+               email : user.email,
+               token : generateToken(user._id)
            })
        } else {
            res.status(400)
@@ -53,8 +64,26 @@ const registerUser = asyncHandler(
 )
 
 const loginUser = asyncHandler(
-    (req,res) =>{
-        res.send('Login Route')
+   async (req,res) =>{
+       
+        const {email,password} = req.body
+        const user = await User.findOne({email})
+
+        //Check User & Password
+
+        if(user && (await bcrypt.compare(
+            password, user.password
+        ))) {
+            res.status(200).json({
+                _id: user._id,
+                name : user.name,
+                email : user.email,
+                token : generateToken(user._id)
+            })
+        } else {
+            res.status(401)
+            throw new Error ('Invalid Credentials')
+        }
     } 
 )
 
